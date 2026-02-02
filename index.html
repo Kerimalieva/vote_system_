@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Exam • High Correctness Mode</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --card: #111827;
+      --primary: #6366f1;
+      --accent: #a78bfa;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --text: #e2e8f0;
+      --text-light: #94a3b8;
+      --gray: #334155;
+      --error-bg: rgba(239,68,68,0.15);
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      min-height:100vh;
+      background: linear-gradient(135deg, #0a0e17, #0f172a);
+      color: var(--text);
+      font-family: system-ui, sans-serif;
+      line-height: 1.5;
+    }
+
+    .container { max-width: 620px; margin: 0 auto; padding: 2rem 1rem; }
+
+    header { text-align:center; padding: 3.5rem 0 2rem; }
+    h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, #c084fc, #818cf8, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.4rem;
+      border-radius: 999px;
+      font-weight: 600;
+      margin: 1.2rem 0;
+    }
+    .open  { background: rgba(16,185,129,0.2); color: var(--success); border:1px solid var(--success); }
+    .closed { background: rgba(239,68,68,0.2); color: var(--danger);  border:1px solid var(--danger);  }
+    .submitted { background: rgba(99,102,241,0.2); color: var(--accent); border:1px solid var(--accent); }
+
+    .card {
+      background: var(--card);
+      border-radius: 1.25rem;
+      padding: 2rem;
+      box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+      border: 1px solid rgba(99,102,241,0.1);
+      margin-bottom: 2rem;
+    }
+
+    .question { font-size: 1.35rem; font-weight: 600; margin-bottom: 1.8rem; }
+
+    .options { display: flex; flex-direction: column; gap: 1rem; }
+
+    .option {
+      background: rgba(30,41,59,0.7);
+      border: 2px solid transparent;
+      border-radius: 1rem;
+      padding: 1.25rem 1.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 1.1rem;
+    }
+
+    .option:hover { background: rgba(45,55,75,0.9); transform: translateX(6px); }
+
+    .option.selected {
+      border-color: var(--primary);
+      background: linear-gradient(90deg, rgba(99,102,241,0.25), rgba(167,139,250,0.18));
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.3);
+    }
+
+    .submit-area { text-align:center; margin-top: 2.5rem; }
+
+    .btn {
+      padding: 1rem 2.5rem;
+      font-size: 1.15rem;
+      font-weight: 600;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      color: white;
+      box-shadow: 0 10px 25px -8px rgba(99,102,241,0.5);
+      transition: all .25s;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 35px -8px rgba(99,102,241,0.7);
+    }
+
+    .btn:disabled {
+      background: var(--gray);
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .message {
+      margin: 1.5rem 0;
+      padding: 1rem 1.5rem;
+      border-radius: 1rem;
+      font-weight: 500;
+    }
+    .success { background: rgba(16,185,129,0.2); color: var(--success); border:1px solid var(--success); }
+    .error   { background: var(--error-bg); color: var(--danger); border:1px solid var(--danger); }
+    .warning { background: rgba(245,158,11,0.15); color: var(--warning); border:1px solid var(--warning); }
+
+    .audit-log {
+      background: rgba(30,41,59,0.5);
+      border-radius: 1rem;
+      padding: 1rem;
+      font-family: monospace;
+      font-size: 0.9rem;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .admin-panel { text-align:center; margin: 3rem 0; padding: 1.5rem; background: rgba(30,41,59,0.3); border-radius: 1rem; }
+
+    .footer { text-align:center; color:var(--text-light); padding: 3rem 0; font-size:0.95rem; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <h1>Exam — High Correctness</h1>
+    <div class="status-pill" id="examStatus">Exam status...</div>
+  </header>
+
+  <div class="card" id="questionCard">
+    <div class="question" id="questionText"></div>
+
+    <div class="options" id="optionsList"></div>
+
+    <div class="submit-area">
+      <button class="btn" id="submitAnswerBtn" disabled>
+        <i class="fa-solid fa-paper-plane"></i> Commit Answer
+      </button>
+    </div>
+
+    <div class="message" id="submitMessage" style="display:none;"></div>
+  </div>
+
+  <div class="card" id="auditCard" style="display:none;">
+    <h3>Audit Trail (local)</h3>
+    <div class="audit-log" id="auditLog"></div>
+  </div>
+
+  <div class="admin-panel">
+    <button class="btn" id="adminStartExam">Start Exam</button>
+    <button class="btn" id="adminEndExam" style="margin-left:1rem; display:none;">End Exam</button>
+    <button class="btn" id="adminResetMySession" style="margin-left:1rem; background:#475569;">
+      <i class="fa-solid fa-rotate-left"></i> Reset My Session
+    </button>
+  </div>
+
+  <div class="footer">
+    Idempotent • Auditable • 2026
+  </div>
+
+</div>
+
+<script>
+const EXAM = {
+  question: "Which protocol provides the strongest consistency guarantees for writes under high load in a distributed system?",
+  options: [
+    { id: "a", text: "Paxos / Raft (consensus)" },
+    { id: "b", text: "Eventual Consistency (Cassandra, Dynamo)" },
+    { id: "c", text: "Linearizability via ZooKeeper / etcd" },
+    { id: "d", text: "Strong consistency with two-phase commit (2PC)" },
+    { id: "e", text: "CRDT (Conflict-free Replicated Data Types)" }
+  ],
+  isActive: false
+};
+
+const STATE = {
+  selectedOption: null,
+  submissionId: null,
+  hasSubmittedSuccessfully: false,
+  auditLog: []
+};
+
+const $ = s => document.querySelector(s);
+const statusEl      = $('#examStatus');
+const questionText  = $('#questionText');
+const optionsList   = $('#optionsList');
+const submitBtn     = $('#submitAnswerBtn');
+const messageEl     = $('#submitMessage');
+const auditCard     = $('#auditCard');
+const auditLogEl    = $('#auditLog');
+
+const btnStart = $('#adminStartExam');
+const btnEnd   = $('#adminEndExam');
+const btnReset = $('#adminResetMySession');
+
+function generateSubmissionId() {
+  return 'sub_' + Date.now() + Math.random().toString(36).slice(2,9);
+}
+
+function logAudit(action, details = {}, status = 'info') {
+  const time = new Date().toISOString().slice(11,19);
+  const entry = `${time} | ${action} ${JSON.stringify(details)}`;
+  STATE.auditLog.push(entry);
+
+  const div = document.createElement('div');
+  div.textContent = entry;
+  if (status === 'success') div.style.color = 'var(--success)';
+  if (status === 'error')   div.style.color = 'var(--danger)';
+  auditLogEl.appendChild(div);
+  auditLogEl.scrollTop = auditLogEl.scrollHeight;
+  auditCard.style.display = 'block';
+}
+
+function updateUI() {
+  if (!EXAM.isActive) {
+    statusEl.textContent = 'Exam is closed';
+    statusEl.className = 'status-pill closed';
+    submitBtn.disabled = true;
+    return;
+  }
+  if (STATE.hasSubmittedSuccessfully) {
+    statusEl.textContent = 'Answer committed';
+    statusEl.className = 'status-pill submitted';
+    submitBtn.disabled = true;
+    return;
+  }
+  statusEl.textContent = STATE.selectedOption
+    ? 'Ready to submit'
+    : 'Select your answer';
+  statusEl.className = 'status-pill open';
+  submitBtn.disabled = !STATE.selectedOption;
+}
+
+function renderOptions() {
+  questionText.textContent = EXAM.question;
+  optionsList.innerHTML = '';
+
+  EXAM.options.forEach(opt => {
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.dataset.id = opt.id;
+    div.textContent = opt.text;
+
+    div.addEventListener('click', () => {
+      if (!EXAM.isActive || STATE.hasSubmittedSuccessfully) return;
+      document.querySelectorAll('.option').forEach(el => el.classList.remove('selected'));
+      div.classList.add('selected');
+      STATE.selectedOption = opt.id;
+      updateUI();
+    });
+
+    optionsList.appendChild(div);
+  });
+}
+
+function showMessage(text, type = 'success') {
+  messageEl.textContent = text;
+  messageEl.className = `message ${type}`;
+  messageEl.style.display = 'block';
+}
+
+function submitAnswer() {
+  if (!EXAM.isActive) return showMessage('Exam is closed', 'error');
+  if (STATE.hasSubmittedSuccessfully) return showMessage('Already submitted', 'warning');
+  if (!STATE.selectedOption) return showMessage('Select an option first', 'warning');
+
+  if (!STATE.submissionId) STATE.submissionId = generateSubmissionId();
+
+  logAudit('submit_attempt', { option: STATE.selectedOption, id: STATE.submissionId });
+
+  setTimeout(() => {
+    const key = `exam_sub_${STATE.submissionId}`;
+    if (localStorage.getItem(key) === 'ok') {
+      showMessage('Already accepted (idempotent)', 'success');
+      STATE.hasSubmittedSuccessfully = true;
+      updateUI();
+      return;
+    }
+
+    localStorage.setItem(key, 'ok');
+    localStorage.setItem('exam_choice', STATE.selectedOption);
+
+    showMessage(`Answer committed (${STATE.selectedOption.toUpperCase()})`, 'success');
+    STATE.hasSubmittedSuccessfully = true;
+    logAudit('submit_success', { option: STATE.selectedOption }, 'success');
+    updateUI();
+  }, 700);
+}
+
+btnStart.onclick = () => { EXAM.isActive = true; updateUI(); logAudit('exam_started'); };
+btnEnd.onclick   = () => { EXAM.isActive = false; updateUI(); logAudit('exam_ended'); };
+btnReset.onclick = () => {
+  if (!confirm('Reset local session?')) return;
+  STATE.selectedOption = null;
+  STATE.submissionId = null;
+  STATE.hasSubmittedSuccessfully = false;
+  auditLogEl.innerHTML = '';
+  auditCard.style.display = 'none';
+  localStorage.removeItem('exam_choice');
+  document.querySelectorAll('.option').forEach(el => el.classList.remove('selected'));
+  messageEl.style.display = 'none';
+  updateUI();
+  logAudit('session_reset');
+};
+
+submitBtn.onclick = submitAnswer;
+
+renderOptions();
+updateUI();
+
+if (localStorage.getItem('exam_choice')) {
+  STATE.hasSubmittedSuccessfully = true;
+  STATE.selectedOption = localStorage.getItem('exam_choice');
+  document.querySelector(`[data-id="${STATE.selectedOption}"]`)?.classList.add('selected');
+  updateUI();
+  showMessage('Previous answer restored', 'success');
+}
+</script>
+</body>
+</html>
